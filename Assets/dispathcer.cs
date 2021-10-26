@@ -56,6 +56,7 @@ class Cloth
     public int N;
     public Cloth(int N, float3 startPos, float nodeStep, float density)
     {
+
         // it shoule note that j + N * i = index
         this.N = N;
         numNode = N * N;
@@ -176,14 +177,14 @@ class Cloth
         return dataForDraw;
     }
 
-    public void updateStep()
+    public void updateStep(float3 ballPos)
     {
         calculateGravity();
         for (int i = 0; i < PARA.numIter; i++)
         {
             updateConstraints();
         }
-        collisionDetect();
+        collisionDetect(ballPos);
         integrate();
     }
 
@@ -240,11 +241,11 @@ class Cloth
         }
     }
 
-    void collisionDetect()
+    void collisionDetect(float3 ballPos)
     {
         for (int i = 0; i < numNode; i++)
         {
-            float3 gapVec = nodePredPos[i] - PARA.ballCenter;
+            float3 gapVec = nodePredPos[i] - ballPos;
             float gapLen = math.length(gapVec);
 
             if (gapLen < PARA.ballRadius)
@@ -272,10 +273,16 @@ public class dispathcer : MonoBehaviour
     ClothData[] dataForDraw; // (N-1) * (N-1) * 12
     ComputeBuffer cBufferDataForDraw;
     Cloth cloth;
+    GameObject sphere;
 
     public Material mainMaterial;
     void Start()
     {
+        sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        sphere.transform.parent = this.transform;
+        sphere.transform.position = new Vector3(PARA.ballCenter.x, PARA.ballCenter.y, PARA.ballCenter.z);
+        sphere.transform.localScale = new Vector3(PARA.ballRadius * 2.0f, PARA.ballRadius * 2.0f, PARA.ballRadius * 2.0f);
+
         cloth = new Cloth(32, new float3(0.0f, 0.0f, 0.0f), 0.2f, 1.0f);
 
         N = cloth.N;
@@ -285,11 +292,6 @@ public class dispathcer : MonoBehaviour
 
         cBufferDataForDraw = new ComputeBuffer((N - 1) * (N - 1) * 12, 12);
         cBufferDataForDraw.SetData(dataForDraw, 0, 0, (N - 1) * (N - 1) * 12);
-
-        var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        sphere.transform.parent = this.transform;
-        sphere.transform.position = new Vector3(PARA.ballCenter.x, PARA.ballCenter.y, PARA.ballCenter.z);
-        sphere.transform.localScale = new Vector3(PARA.ballRadius * 2.0f, PARA.ballRadius * 2.0f, PARA.ballRadius *2.0f);
     }
 
     // Update is called once per frame
@@ -302,7 +304,7 @@ public class dispathcer : MonoBehaviour
         if (flag)
         {
             //flag = false;
-            cloth.updateStep();
+            cloth.updateStep(sphere.transform.position);
             dataForDraw = cloth.getColthDrawData();
             cBufferDataForDraw.SetData(dataForDraw, 0, 0, (N - 1) * (N - 1) * 12);
         }
